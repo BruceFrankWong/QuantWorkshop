@@ -127,3 +127,24 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+
+# ==================================================
+# The following rows are personal customized.
+# ==================================================
+
+# Pycharm
+.idea/
+!.idea/dictionaraies/
+
+# Application configuration files
+config.json
+
+# Applicaiton log files
+log/
+
+# Sqlite database
+*.sqlite
+
+# Data downloaded
+data_downloaded/
