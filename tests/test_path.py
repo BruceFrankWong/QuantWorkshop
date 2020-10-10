@@ -14,11 +14,12 @@ Request：
 import pytest
 
 import os.path
+import QuantWorkshop
 from QuantWorkshop.utility import application_path
 
 
 def test_application_path():
-    assert str(application_path) == os.path.dirname(os.path.abspath(__file__))
+    assert str(application_path) == os.path.dirname(QuantWorkshop.__file__)
 
 
 if __name__ == '__main__':
