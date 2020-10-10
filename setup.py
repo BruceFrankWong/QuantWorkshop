@@ -2,16 +2,19 @@
 # -*- coding: utf-8 -*-
 
 import re
+import os.path
 from setuptools import setup, find_packages
 
 
 def get_version_string():
-    with open('QuantWorkshop/__init__.py', 'r') as f:
+    with open(os.path.join(package_path, 'src/QuantWorkshop/__init__.py'), 'r') as f:
         version_line = re.search(
             r'__version__\s+=\s+(.*)', f.read()
         ).group(1)
     return version_line
 
+
+package_path = os.path.dirname(os.path.abspath(__file__))
 
 setup(
     name='QuantWorkshop',
