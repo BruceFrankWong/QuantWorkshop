@@ -29,6 +29,13 @@ def generate_default_config() -> dict:
             'password': '',
         },
 
+        # 记录
+        'strategy_record': {
+            'backtest': 'backtest',
+            'replay': 'replay',
+            'real': 'real',
+        },
+
         # 天勤量化
         'tq': {
             'account': '',

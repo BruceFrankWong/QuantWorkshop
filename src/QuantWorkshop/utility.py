@@ -9,6 +9,7 @@ import json
 
 # The path of the packages <QuantWorkshop>
 packages_path: Path = Path(__file__).parent
+packages_path_str: str = str(packages_path)
 
 
 def load_json(json_file: Path) -> dict:
