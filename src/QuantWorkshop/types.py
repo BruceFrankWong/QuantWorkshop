@@ -58,46 +58,72 @@ class QWPeriodUnitType(Enum):
     Month = 'Month'
     Year = 'Year'
 
+    def to_second(self) -> int:
+        if self.value == 'Tick':
+            return 0
+        elif self.value == 'Second':
+            return 1
+        elif self.value == 'Minute':
+            return 60
+        elif self.value == 'Hour':
+            return 60 * 60
+        elif self.value == 'Day':
+            return 60 * 60 * 24
+        elif self.value == 'Week':
+            return 60 * 60 * 24 * 5
+        elif self.value == 'Month':
+            return 60 * 60 * 24 * 5 * 4
+        elif self.value == 'Year':
+            return 60 * 60 * 24 * 5 * 4 * 12
+
+    def to_chinese(self) -> str:
+        if self.value == 'Tick':
+            return 'Tick'
+        elif self.value == 'Second':
+            return '秒'
+        elif self.value == 'Minute':
+            return '分钟'
+        elif self.value == 'Hour':
+            return '小时'
+        elif self.value == 'Day':
+            return '日'
+        elif self.value == 'Week':
+            return '周'
+        elif self.value == 'Month':
+            return '月'
+        elif self.value == 'Year':
+            return '年'
+
 
 class QWPeriod(object):
     unit: QWPeriodUnitType
     frequency: int
 
-    def __init__(self, **kwargs):
-        pass
+    def __init__(self, frequency: int, unit: QWPeriodUnitType):
+        self.unit = unit
+        if frequency < 1:
+            raise ValueError('parameter <frequency> should be a positive integer.')
+        else:
+            self.frequency = frequency
 
     def to_second(self) -> int:
-        if self.unit == QWPeriodUnitType.Tick:
-            return 0
-        elif self.unit == QWPeriodUnitType.Second:
-            return self.frequency
-        elif self.unit == QWPeriodUnitType.Minute:
-            return self.frequency * 60
-        elif self.unit == QWPeriodUnitType.Hour:
-            return self.frequency * 60 * 60
-        elif self.unit == QWPeriodUnitType.Day:
-            return self.frequency * 60 * 60 * 24
-        elif self.unit == QWPeriodUnitType.Week:
-            return self.frequency * 60 * 60 * 24 * 5
-        elif self.unit == QWPeriodUnitType.Month:
-            return self.frequency * 60 * 60 * 24 * 20
-        elif self.unit == QWPeriodUnitType.Year:
-            return self.frequency * 60 * 60 * 24 * 240
-        else:
-            raise RuntimeError('<unit> is unknown type.')
+        return self.frequency * self.unit.to_second()
 
-    @classmethod
-    def period_unit_to_second(cls, pu: QWPeriodUnitType) -> int:
-        if pu == QWPeriodUnitType.Tick:
-            return 0
-        elif pu == QWPeriodUnitType.Second:
-            return 1
-        elif pu == QWPeriodUnitType.Minute:
-            return 60
-        elif pu == QWPeriodUnitType.Hour:
-            return 60 * 60
-        elif pu == QWPeriodUnitType.Day:
-            return 60 * 60 * 24
+    def to_english(self) -> str:
+        return f'{str(self.frequency) if self.frequency > 1 else ""}{self.unit.value}'
+
+    def to_chinese(self) -> str:
+        return f'{str(self.frequency) if self.frequency > 1 else ""}{self.unit.to_chinese()}'
+
+    def __repr__(self) -> str:
+        return f'<QWPeriod(frequency={self.frequency}), unit={self.unit.value}>'
+
+    def __str__(self) -> str:
+        result: str = ''
+        if self.frequency > 1:
+            result += str(self.frequency)
+        result += self.unit.value
+        return result
 
 
 class QWExchange(Enum):
