@@ -5,6 +5,7 @@ __author__ = 'Bruce Frank Wong'
 
 from sqlalchemy import create_engine, event, MetaData, inspect
 from sqlalchemy.orm import sessionmaker
+from sqlalchemy.ext.declarative import declarative_base
 
 from QuantWorkshop.utility import packages_path_str
 from QuantWorkshop.config import CONFIGS
@@ -34,4 +35,6 @@ def db_engine():
     return generator[CONFIGS['database']['driver']]()
 
 
-db_session = sessionmaker(bind=db_engine)()
+db_session = sessionmaker(bind=db_engine())()
+
+ModelBase = declarative_base()

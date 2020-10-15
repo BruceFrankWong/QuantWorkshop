@@ -1,7 +1,7 @@
-name_en,name_zh
-bond,债券
-stock,股票
-futures,期货
-fund,基金
-option,期权
-CovertibleBond,可转债
+product_type,product_type_zh
+Bond,债券
+Stock,股票
+Futures,期货
+Fund,基金
+Option,期权
+ConvertibleBond,可转债

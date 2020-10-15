@@ -18,9 +18,10 @@ def init_exchange():
         for row in reader:
             db_session.add(
                 Exchange(
+                    symbol=row['symbol'],
                     name=row['name'],
-                    fullname=row['fullname'],
-                    symbol=row['symbol']
+                    fullname_zh=row['fullname_zh'],
+                    fullname_en=row['fullname_en']
                 )
             )
     db_session.commit()
@@ -33,22 +34,19 @@ def init_product_type():
         for row in reader:
             db_session.add(
                 ProductType(
-                    name_en=row['name_en'],
-                    name_zh=row['name_zh']
+                    product_type=row['product_type'],
+                    product_type_zh=row['product_type_zh']
                 )
             )
     db_session.commit()
 
 
-def init_product_type():
-    csv_path: str = os.path.join(packages_path_str, 'database', 'data', 'product_type.csv')
-    with open(csv_path, newline='', encoding='utf-8') as csv_file:
-        reader = csv.DictReader(csv_file)
-        for row in reader:
-            db_session.add(
-                ProductType(
-                    name_en=row['name_en'],
-                    name_zh=row['name_zh']
-                )
-            )
-    db_session.commit()
+def initialize():
+    initializer_dict: dict = {
+        'Exchange': init_exchange,
+        'ProductType': init_product_type,
+    }
+
+    # TODO: 判断表是否存在
+    for table, initializer in initializer_dict.items():
+        initializer()
