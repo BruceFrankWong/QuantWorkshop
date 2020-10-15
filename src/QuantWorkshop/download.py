@@ -33,7 +33,6 @@ def download(symbol: str, period: QWPeriod, date_start: date, date_end: date = N
 
     # 天勤API
     tq_api: TqApi = TqApi(auth=TqAuth(CONFIGS['tq']['account'], CONFIGS['tq']['password']))
-
     task = DataDownloader(
         tq_api,
         symbol_list=symbol,
@@ -49,7 +48,7 @@ def download(symbol: str, period: QWPeriod, date_start: date, date_end: date = N
             tq_api.wait_update()
             print(f'正在下载 [{symbol}] 的 {period.to_chinese()} 数据，已完成： {task.get_progress():,.3f}%。')
 
-    # 处理 csv 文件的 column。
+    # 处理 data 文件的 column。
     column_list: List[str]
     df: pd.DataFrame = pd.read_csv(csv_file)
     if period.unit == QWPeriodUnitType.Tick:
