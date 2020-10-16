@@ -27,7 +27,7 @@ def db_engine_postgresql():
     )
 
 
-def db_engine():
+def get_db_engine():
     generator: dict = {
         'sqlite': db_engine_sqlite,
         'postgresql': db_engine_postgresql,
@@ -35,6 +35,7 @@ def db_engine():
     return generator[CONFIGS['database']['driver']]()
 
 
-db_session = sessionmaker(bind=db_engine())()
+db_engine = get_db_engine()
+db_session = sessionmaker(bind=db_engine)()
 
 ModelBase = declarative_base()

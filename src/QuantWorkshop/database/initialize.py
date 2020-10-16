@@ -7,7 +7,7 @@ import os
 import csv
 
 from QuantWorkshop.utility import packages_path_str
-from .interface import db_session
+from .interface import db_session, db_engine
 from .model import Exchange, ProductType
 
 
@@ -47,6 +47,7 @@ def initialize():
         'ProductType': init_product_type,
     }
 
-    # TODO: 判断表是否存在
     for table, initializer in initializer_dict.items():
+        if not db_engine.dialect.has_table(db_engine, globals()[table].__tablename__):
+            globals()[table].__table__.create(bind = db_engine)
         initializer()
