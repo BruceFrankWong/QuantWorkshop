@@ -29,7 +29,7 @@ def download(symbol: str, period: QWPeriod, date_start: date, date_end: date = N
     download_path: str = os.path.join(packages_path_str, CONFIGS['data_downloaded'])
     if not os.path.exists(download_path):
         os.mkdir(download_path)
-    csv_file: str = os.path.join(download_path, f'{symbol}_{period.to_chinese()}.csv')
+    csv_file: str = os.path.join(download_path, f'{symbol}_{period.to_english()}.csv')
 
     # 天勤API
     tq_api: TqApi = TqApi(auth=TqAuth(CONFIGS['tq']['account'], CONFIGS['tq']['password']))
