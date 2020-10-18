@@ -22,15 +22,30 @@ Test Requirements：
 """
 
 import os
+import csv
 from pathlib import Path
 
+from QuantWorkshop.utility import packages_path_str
 from QuantWorkshop.config import CONFIGS, generate_default_config, load_config
-from QuantWorkshop.database.initialize import initialize
+from QuantWorkshop.database import db_session, initialize, Exchange, Security
 
 
-def do_test():
+def test_initialize():
     initialize()
 
 
+def test_exchange_and_security():
+    exchange_name: str = '上交所'
+    exchange: Exchange = db_session.query(Exchange).filter_by(name=exchange_name).one()
+    result = db_session.query(Exchange).filter(Exchange.security_list.any(name_en='Stock')).all()
+    print(result)
+    print(Exchange.symbol_list())
+    # element: ErExchangeAndSecurity
+    # for element in exchange.security_list:
+    #     print(element.exchange_id)
+    #     print(type(element))
+
+
 if __name__ == '__main__':
-    do_test()
+    test_initialize()
+    test_exchange_and_security()
