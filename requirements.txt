@@ -28,7 +28,7 @@ scipy==1.5.2
 simplejson==3.17.2
 six==1.15.0
 SQLAlchemy==1.3.19
-TA-Lib @ file:///C:/Users/bruce/Downloads/TA_Lib-0.4.19-cp38-cp38-win_amd64.whl
+TA-Lib==0.4.19
 toml==0.10.1
 tqsdk==2.0.3
 urllib3==1.25.10
