@@ -5,7 +5,6 @@ __author__ = 'Bruce Frank Wong'
 
 from typing import List
 import os
-from datetime import date
 
 import pandas as pd
 import numpy as np
@@ -16,22 +15,48 @@ from talib import ATR
 
 from QuantWorkshop.config import CONFIGS
 from QuantWorkshop.utility import packages_path_str
-from QuantWorkshop.types import QWPeriod, QWPeriodUnitType
-from QuantWorkshop.download import download
 
 
-def zigzag(symbol: str, period: QWPeriod):
+def zigzag(df: pd.DataFrame, depth: int = 12, deviation: int = 5, backstep: int = 3):
     """
     锯齿趋势线。
-    """
-    # 读取数据。
-    csv_file: str = os.path.join(packages_path_str, CONFIGS['data_downloaded'], f'{symbol}_{period.to_english()}.csv')
-    if not os.path.exists(csv_file):
-        download(symbol, period, date(2016, 1, 1))
-    df_x: pd.DataFrame = pd.read_csv(csv_file, index_col='datetime', parse_dates=True)
-    # df.DatetimeIndex = df['datetime']
 
-    df: pd.DataFrame = df_x.loc['2020-10-19 09:00:00':'2020-10-19 11:00:00']
+    参数：
+        Depth: int = 12
+        Deviation: int = 5
+        Backstep: int = 3
+
+    算法：
+    1) 对计算位置进行初期化
+        1.1) 判断是否是第一次进行高低点计算，如果是，则设定计算位置为除去 Depth个图形最初的部分。
+        1.2) 如果之前已经计算过，找到最近已知的三个拐点（高点或低点），将计算位置设置为倒数第三个拐点之后，重新计算最后的拐点。
+    2) 从<步骤1>已经设置好的计算位置开始，将对用于存储高低点的变量进行初始化，准备计算高低点
+        2.1) 计算 Depth 区间内的低点，如果该低点是当前低点，则进行2.1.1的计算，并将其记录成一个低点。
+            2.1.1) 如果当前低点比上一个低点值小于相对点差(Deviation)；并且之前 Backstep 个 Bars 的记录的中，高于当前低点的值清空。
+        2.2) 高点的计算如同 <2.1> 以及分支处理 <2.1.1>。
+    3) 从<步骤1>已经设置好的计算位置开始，定义指标高点和低点
+        3.1) 如果开始位置为高点，则接下来寻找低点，在找到低点之后，将下一个寻找目标定义为高点
+        3.2) 如果开始位置为低点，则与<3.1>反之。
+
+    以上可能比较难以理解，我们这边举个例子说明。假设上次计算的结果如下：
+        倒数第14个Bar出现了一个高点(3.1)，倒数第4个是低点(1.5)，倒数第1个是新的高点(2.1)——因为距离倒数第14已经大于 Depth(14-1>12)。
+        Bar-14 Bar-4 Bar-1 Bar-Current 高(3.1) 低(1.5) 高(2.1) X 对于 Bar-Current，即当前的价格X，
+
+        CaseI.
+        如果 X >= 2.1 + Deviation，则根据Zigzag的定义，这将是一个新的高点。
+        假设这里 X = 2.3，那么我们绘制指标的时候应该成为： Bar-14 Bar-4 Bar-Current 高(3.1) 低(1.5) 高(2.3)
+
+        CaseII.
+        如果 1.5 - Deviation < X < 2.1 + Deviation，则我们继续等待价格的变化，所绘制的指标也不会变化。
+
+        CaseIII.
+        如果 X <= 1.5 - Deviation，则这是一个新的低点。
+        假设这里 X=1.3，则我们绘制指标的时候应该成为： Bar-14 Bar-Current 高(3.1) 低(1.3)
+        这个时候，之前的Bar-4因为在我们定义的 Backstep之内(1-4)，所以他的最低值会被清空， 根据算法第三步的定义，
+        我们会一直寻找低点直到发现Bar-Current，这时候已经遍历过Bar-1，所以Bar-1定义的高点也不再成为拐点。
+    """
+
+    # df_cal: pd.DataFrame = df.loc['2020-10-19 09:00:00':'2020-10-19 11:00:00']
 
     # Create zigzag trend line.
     ########################################
@@ -67,7 +92,8 @@ def zigzag(symbol: str, period: QWPeriod):
     ##########################
     plt.xlabel('Date')
     plt.ylabel('Price')
-    plt.title(f'ZigZag trend line - {symbol} on {period.to_english()}')
+    plt.title(f'ZigZag trend line')
+    # plt.title(f'ZigZag trend line - {symbol} on {period.to_english()}')
 
     # Format time.
     ax.xaxis_date()
