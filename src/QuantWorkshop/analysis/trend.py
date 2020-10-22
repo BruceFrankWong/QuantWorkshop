@@ -5,6 +5,7 @@ __author__ = 'Bruce Frank Wong'
 
 from typing import List
 import os
+from enum import Enum
 
 import pandas as pd
 import numpy as np
@@ -15,6 +16,85 @@ from talib import ATR
 
 from QuantWorkshop.config import CONFIGS
 from QuantWorkshop.utility import packages_path_str
+
+
+class QWPivotPointType(Enum):
+    NotPivot: 'NotPivot'
+    Low: 'Low'
+    High: 'High'
+
+
+class QWPivotPoint(object):
+    index: int
+    label: pd.Timestamp
+    type_: QWPivotPointType
+    value: float
+
+    def __init__(self, type_: QWPivotPointType, value: float, index: int, label: pd.Timestamp):
+        self.type_ = type_
+        self.value = value
+        self.index = index
+        self.label = label
+
+
+def initial_zigzag(df: pd.DataFrame) -> tuple:
+    high_initial: float = df.iloc[0]['high']
+    low_initial: float = df.iloc[0]['low']
+
+    high_current: float = df.iloc[1]['high']
+    low_current: float = df.iloc[1]['low']
+
+    high_preview: float
+    low_preview: float
+
+    if high_current >= high_initial and low_current >= low_initial:
+        return df.index[0], low_initial, -1
+    elif high_current <= high_initial and low_current <= low_initial:
+        return df.index[0], high_initial, 1
+
+
+# def zigzag_hl(df: pd.DataFrame, depth: int = 12, deviation: int = 5, backstep: int = 3):
+#     """
+#     Zigzag on High/Low.
+#     :param df:
+#     :param depth:
+#     :param deviation:
+#     :param backstep:
+#     :return:
+#     """
+#     idx: int
+#     highest: float
+#     lowest: float
+#     pivot_point_list: List[QWPivotPoint]
+#
+#     if 'zigzag' in df.columns:
+#         print('not new')
+#     else:
+#         print('Column "zigzag_hl" not found. Calculate the entire series.')
+#         # highest = df.iloc[0]['high']
+#         # lowest = df.iloc[0]['low']
+#
+#         # 计算从 0 到 Depth-1 范围内的最高、最低点
+#         df_cal: pd.DataFrame = df.iloc[0:depth]
+#
+#         highest = df_cal['high'].max()
+#         pivot_high: QWPivotPoint = QWPivotPoint(
+#             type_=QWPivotPointType.High,
+#             value=highest,
+#             label=df_cal[(df_cal.high == highest)].index.tolist()[-1],
+#             index=df_cal.index.get_loc(df_cal[(df_cal.high == highest)].index.tolist()[-1])
+#         )
+#
+#         lowest: float = df_cal['low'].min()
+#         label_lowest: pd.Timestamp = df_cal[(df_cal.low == lowest)].index.tolist()[-1]
+#         index_lowest: int = df_cal.index.get_loc(label_lowest)
+#
+#         print(f'high={highest}, index={label_highest} and at {index_highest}')
+#         print(f'low={lowest}, index={label_lowest} and at {index_lowest}')
+#
+#         print(type(label_lowest))
+#         # for idx in range(depth, len(df)):
+#         #     if df.iloc[idx]['high']
 
 
 def zigzag(df: pd.DataFrame, depth: int = 12, deviation: int = 5, backstep: int = 3):
@@ -55,6 +135,26 @@ def zigzag(df: pd.DataFrame, depth: int = 12, deviation: int = 5, backstep: int 
         这个时候，之前的Bar-4因为在我们定义的 Backstep之内(1-4)，所以他的最低值会被清空， 根据算法第三步的定义，
         我们会一直寻找低点直到发现Bar-Current，这时候已经遍历过Bar-1，所以Bar-1定义的高点也不再成为拐点。
     """
+
+    highest: float
+    lowest: float
+    if 'zigzag' in df.columns:
+        print('not new')
+    else:
+        print('new')
+        # 计算 Depth 范围内的最高、最低点
+        df_cal = df.iloc[0:depth]
+        print(df_cal)
+
+        highest = df_cal['high'].max()
+        idx_highest = df_cal[(df_cal.high == highest)].index.tolist()[-1]
+
+        lowest = df_cal['low'].min()
+        idx_lowest = df_cal[(df_cal.low == lowest)].index.tolist()[-1]
+
+        print(f'high={highest}, index={idx_highest} and at {df_cal.index.get_loc(idx_highest)}')
+        print(f'low={lowest}, index={idx_lowest} and at {df_cal.index.get_loc(idx_lowest)}')
+        # print(df.head(depth * 2))
 
     # df_cal: pd.DataFrame = df.loc['2020-10-19 09:00:00':'2020-10-19 11:00:00']
 
@@ -274,3 +374,79 @@ def compute_segment_returns(X, pivots):
     :return: numpy array of the pivot-to-pivot returns for each segment."""
     pivot_points = X[pivots != 0]
     return pivot_points[1:] / pivot_points[:-1] - 1.0
+
+
+class Trend(Enum):
+    Up = 'UP'
+    Down = 'DOWN'
+    Sideways = 'Sideways'
+
+
+def zigzag_hl(df: pd.DataFrame, echo: bool = False) -> tuple:
+    """
+    用最高价和最低价做趋势判断。
+
+    返回一个列表，表中每个元素均为三个字段的元组。
+    三个字段依次为：趋势开始的K线index, 趋势结束的K线index, 趋势。
+    :return:  List[Tuple[int, int, Trend]]
+    """
+
+    message = '第 {index} 个数据, ' \
+              '最高价/前最高价: {high} / {prev_high}, Delta = {dh}, ' \
+              '最低价/前最低价: {low} / {prev_low}, Delta = {dl}, ' \
+              '趋势: {trend}, {status}.'
+
+    pivot_point_list: list = [(df.index[0], df.iloc[0]['low'])]
+    high_list: list = []
+    low_list: list = [(df.index[0], df.iloc[0]['low'])]
+    cursor: float = df.iloc[0]['low']
+    trend: Trend = Trend.Up
+
+    index: int
+
+    for index in range(1, len(df.index)):
+        if trend == Trend.Up:
+            if df.iloc[index]['high'] >= cursor:
+                status = '延续'
+                cursor = df.iloc[index]['high']
+            else:
+                status = '转折'
+                pivot_point_list.append((df.index[index - 1], df.iloc[index - 1]['high']))
+                if len(high_list) >= 2 and len(low_list) >= 2 and \
+                        high_list[-1][1] <= df.iloc[index - 1]['high'] <= high_list[-2][1]:
+                    del high_list[-1]
+                    del low_list[-1]
+                high_list.append((df.index[index - 1], df.iloc[index - 1]['high']))
+                cursor = df.iloc[index]['low']
+                trend = Trend.Down
+        else:
+            if df.iloc[index]['low'] <= cursor:
+                status = '延续'
+                cursor = df.iloc[index]['low']
+            else:
+                status = '转折'
+                pivot_point_list.append((df.index[index - 1], df.iloc[index - 1]['low']))
+                if len(high_list) >= 2 and len(low_list) >= 2 and \
+                        low_list[-2][1] <= df.iloc[index - 1]['low'] <= low_list[-1][1]:
+                    del high_list[-1]
+                    del low_list[-1]
+                low_list.append((df.index[index - 1], df.iloc[index - 1]['low']))
+                cursor = df.iloc[index]['high']
+                trend = Trend.Up
+
+        if echo:
+            print(message.format(index=index,
+                                 high=df.iloc[index]['high'],
+                                 prev_high=df.iloc[index - 1]['high'],
+                                 dh=df.iloc[index]['high'] - df.iloc[index - 1]['high'],
+                                 low=df.iloc[index]['low'],
+                                 prev_low=df.iloc[index - 1]['low'],
+                                 dl=df.iloc[index]['low'] - df.iloc[index - 1]['low'],
+                                 trend=trend.value,
+                                 status=status
+                                 )
+                  )
+
+    hl_list: list = low_list + high_list
+    hl_list.sort(key=lambda x: x[0])
+    return pivot_point_list, hl_list
