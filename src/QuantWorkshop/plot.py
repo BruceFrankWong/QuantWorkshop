@@ -18,7 +18,8 @@ def plot(df: pd.DataFrame,
          mav: Optional[Tuple[int]] = None,
          alines: Optional[dict] = None):
     color = mpf.make_marketcolors(up='red', down='cyan', inherit=True)
-    style = mpf.make_mpf_style(marketcolors=color)
+    # style = mpf.make_mpf_style(marketcolors=color, rc={'axes.facecolor': '#eee8d5'})#fdf6e3
+    style = mpf.make_mpf_style(marketcolors=color, rc={'axes.facecolor': '#fdf6e3'})
 
     # # 设置外观效果
     # plt.rc('font', family='Microsoft YaHei')  # 用中文字体，防止中文显示不出来
