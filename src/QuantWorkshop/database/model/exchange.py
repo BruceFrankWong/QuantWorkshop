@@ -108,19 +108,3 @@ class Security(ModelBase):
 
     def __repr__(self):
         return f'<Security(name_zh={self.name_zh}, name_en={self.name_en})>'
-
-
-class Holiday(ModelBase):
-    __tablename__ = 'holiday'
-
-    id = Column(Integer, primary_key=True)
-    begin = Column(Date, nullable=False)
-    end = Column(Date, nullable=False)
-    reason = Column(String)
-
-    exchange_id = Column(Integer, ForeignKey('exchange.id'), nullable=False)
-
-    exchange = relationship('Exchange', back_populates='holiday_list')
-
-    def __repr__(self):
-        return f'<Holiday(reason={self.reason}, begin={self.begin}, end={self.end})>'

@@ -15,7 +15,7 @@ from .model import relationship_table_exchange_and_security
 
 
 def init_exchange():
-    csv_path: str = os.path.join(packages_path_str, 'database', 'data', 'exchange.csv')
+    csv_path: str = os.path.join(packages_path_str, 'initial_data', 'exchange.csv')
     with open(csv_path, newline='', encoding='utf-8') as csv_file:
         reader = csv.DictReader(csv_file)
         for row in reader:
@@ -31,7 +31,7 @@ def init_exchange():
 
 
 def init_security():
-    csv_path: str = os.path.join(packages_path_str, 'database', 'data', 'security.csv')
+    csv_path: str = os.path.join(packages_path_str, 'initial_data', 'security.csv')
     with open(csv_path, newline='', encoding='utf-8') as csv_file:
         reader = csv.DictReader(csv_file)
         for row in reader:
@@ -45,7 +45,7 @@ def init_security():
 
 
 def init_relationship_between_exchange_and_security():
-    csv_path: str = os.path.join(packages_path_str, 'database', 'data', 'er_exchange_security.csv')
+    csv_path: str = os.path.join(packages_path_str, 'initial_data', 'er_exchange_security.csv')
     with open(csv_path, newline='', encoding='utf-8') as csv_file:
         reader = csv.DictReader(csv_file)
         for row in reader:
