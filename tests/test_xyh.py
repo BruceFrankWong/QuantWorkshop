@@ -147,10 +147,8 @@ def test_wave_trend(symbol: str, period: QWPeriod):
 
     # 找出极值
     for item in wave_low_filtered:
-        print(f'{item}, 在日期 {item[0]} 至 {item[1]} 的区间中：')
-        day_list = expand_day_range(item)
         wave_min = df.loc[item[0].isoformat():item[1].isoformat(), 'wave'].min()
-        print(df[df['wave'] == wave_min])
+        print(f'在日期 {item[0]} 至 {item[1]} 的区间中，{df[df["wave"] == wave_min].index.values} 最低，{wave_min}。')
 
     # for idx in wave_low_index:
     #     close = df.iloc[idx]['close']
