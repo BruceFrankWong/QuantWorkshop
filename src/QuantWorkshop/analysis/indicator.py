@@ -7,7 +7,7 @@ import pandas as pd
 import talib
 
 
-def wave(df: pd.DataFrame, n_rsi: int = 6, n_wr: int = 14) -> pd.DataFrame:
+def band(df: pd.DataFrame, n_rsi: int = 6, n_wr: int = 14) -> pd.DataFrame:
     # RSI 部分。
     df['rsi'] = talib.RSI(df['close'], n_rsi)
 

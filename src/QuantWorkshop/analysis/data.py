@@ -8,8 +8,8 @@ from datetime import date
 
 import pandas as pd
 
-from QuantWorkshop.utility import packages_path_str
 from QuantWorkshop.config import CONFIGS
+from QuantWorkshop.utility import packages_path_str
 from QuantWorkshop.types import QWPeriod
 from QuantWorkshop.download import download
 

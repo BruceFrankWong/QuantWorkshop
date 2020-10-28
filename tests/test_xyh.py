@@ -13,7 +13,7 @@ import pandas as pd
 from QuantWorkshop.utility import packages_path_str
 from QuantWorkshop.types import QWPeriod, QWPeriodUnitType
 from QuantWorkshop.analysis import load_data
-from QuantWorkshop.analysis.indicator import wave
+from QuantWorkshop.analysis.indicator import band
 
 
 def get_holiday_list() -> List[Tuple[date, date, str]]:
@@ -109,10 +109,9 @@ def test_wave_trend(symbol: str, period: QWPeriod):
     wave_low_date: list = []
     wave_high_index: list = []
     wave_high_date: list = []
-    result_low: list = []
 
     df: pd.DataFrame = load_data(f'KQ.m@{symbol}', period)
-    wave(df)
+    band(df)
     length: int = len(df)
     for idx in range(length):
         if df.iloc[idx]['wave'] < 60:
@@ -146,22 +145,33 @@ def test_wave_trend(symbol: str, period: QWPeriod):
     #     print(x)
 
     # 找出极值
+    wave_low_filtered_index: List[int] = []
     for item in wave_low_filtered:
         wave_min = df.loc[item[0].isoformat():item[1].isoformat(), 'wave'].min()
-        print(f'在日期 {item[0]} 至 {item[1]} 的区间中，{df[df["wave"] == wave_min].index.values} 最低，{wave_min}。')
+        label = df[df["wave"] == wave_min].index.tolist()[0]
+        print(f'在日期 {item[0]} 至 {item[1]} 的区间中，'
+              f'最低值出现在 {label.strftime("%Y-%m-%d")}'
+              f'， 最低值 = {wave_min:.3f}。')
+        wave_low_filtered_index.append(df.index.get_loc(label))
 
-    # for idx in wave_low_index:
-    #     close = df.iloc[idx]['close']
-    #     i: int = 0
-    #     if df.iloc[idx+i-1]['close'] > df.iloc[idx+i]['close']:
-    #         while df.iloc[idx+i-1]['high'] < df.iloc[idx+i]['high'] < df.iloc[idx+i+1]['high']:
-    #             i += 1
-    #         result_low.append((df.index[idx], i))
-    #     else:
-    #         result_low.append((df.index[idx], -1))
-    # for item in result_low:
-    #     print(f'{symbol}： {item[0]} < 60, 此后上涨 {item[1]} 个交易日。')
-    #
+    print('=' * 20)
+
+    # 测试
+    column_list = ['close', 'high']
+    result_low: list = []
+    for idx in wave_low_filtered_index:
+        close = df.iloc[idx]['close']
+        flag: bool = False
+        if df.iloc[idx]['close'] < df.iloc[idx+1]['close']:
+            i: int = 1
+            while df.iloc[idx]['close'] < df.iloc[idx+i]['close'] and idx+i < len(df) - 1:
+                i += 1
+            result_low.append((df.index[idx], i))
+        else:
+            result_low.append((df.index[idx], -1))
+    for item in result_low:
+        print(f'{symbol}： {item[0]} < 60, 此后上涨 {item[1]} 个交易日。')
+
     # df: pd.DataFrame = load_data('CZCE.PF105', QWPeriod(1, QWPeriodUnitType.Hour))
     # x = wave(df.loc['2020-10-23 21:00:00':'2020-10-23 22:59:00'])
     # print(x)
