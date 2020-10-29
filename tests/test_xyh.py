@@ -9,6 +9,7 @@ import csv
 from datetime import date, timedelta
 
 import pandas as pd
+from openpyxl import Workbook
 
 from QuantWorkshop.utility import packages_path_str
 from QuantWorkshop.types import QWPeriod, QWPeriodUnitType
@@ -128,6 +129,8 @@ def test_wave_trend(symbol: str, period: QWPeriod):
     wave_high_filtered: List[Tuple[date, date]] = shrink_day_range(wave_high_date)
     # for item in wave_low_filtered:
     #     print(item)
+
+    wb = Workbook()
 
     print(f'{symbol}：')
     print(f'自 {df.index[0].date()} 至 {df.index[-1].date()}，共 {len(df)} 个交易日。')
