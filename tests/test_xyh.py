@@ -17,6 +17,14 @@ from QuantWorkshop.analysis import load_data
 from QuantWorkshop.analysis.indicator import band
 
 
+def get_dataframe_label(df: pd.DataFrame, idx: int) -> str:
+    return df.index[idx].strftime('%Y-%m-%d %H:%M:%S')
+
+
+def get_dataframe_index(df: pd.DataFrame, idx: str) -> int:
+    return df.index.get_loc(idx)
+
+
 def get_holiday_list() -> List[Tuple[date, date, str]]:
     result: List[Tuple[date, date, str]] = []
     csv_path: str = os.path.join(packages_path_str, 'initial_data', 'holiday.csv')
@@ -105,6 +113,32 @@ def is_consecutive(day_1: date, day_2: date) -> bool:
         return False
 
 
+# def is_engulfing(df: pd.DataFrame, bar_prev: int, bar_next: int) -> bool:
+#     """
+#     反包。
+#     :return:
+#     """
+#     key_price: float
+#     if bar_prev.price_close > bar_prev.price_open:
+#         key_price = bar_prev.price_low
+#     else:
+#         key_price = bar_prev.price_high
+#
+#     # 前后两根K线方向相同
+#     if bar_next.type_ == bar_prev.type_:
+#         return False
+#     if bar_prev.type_ == BarType.Bullish:
+#         if min(bar_next.price_open, bar_next.price_close, bar_next.price_low) <= bar_prev.price_low:
+#             return True
+#         else:
+#             return False
+#     elif bar_prev.type_ == BarType.Bearish:
+#         if max(bar_next.price_open, bar_next.price_close, bar_next.price_high) >= bar_prev.price_high:
+#             return True
+#         else:
+#             return False
+
+
 def test_wave_trend(symbol: str, period: QWPeriod):
     wave_low_index: list = []
     wave_low_date: list = []
@@ -191,6 +225,14 @@ if __name__ == '__main__':
     for symbol in symbol_list:
         for period in period_list:
             test_wave_trend(symbol, period)
+
+    # df: pd.DataFrame = load_data(f'KQ.m@SHFE.ag', QWPeriod(1, QWPeriodUnitType.Day))
+    # x = get_dataframe_label(df, -1)
+    # print(type(x), x)
+    # x = get_dataframe_index(df, '2020-10-30 00:00:00')
+    # print(type(x), x)
+
+    # print(df.iloc[-1])
 
     # Test <get_holiday_list>
     # holiday_list = get_holiday_list()
