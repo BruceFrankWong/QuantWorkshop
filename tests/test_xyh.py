@@ -158,28 +158,48 @@ def is_consecutive(day_1: date, day_2: date) -> bool:
 #             return False
 
 
-def test_band_artifact_low(df: pd.DataFrame):
+def test_band_artifact_low(df: pd.DataFrame, open_window: int = 5):
     # 源数据长度
     length: int = len(df)
 
     # 波段低点
     list_low_index: list = [df.index.get_loc(x) for x in df[df['ba'] <= 60].index]
+
     # 低点数量
     count_low_index: int = len(list_low_index)
+
     # 波段低点分组
     list_low_group: List[Tuple[int, int]] = group(list_low_index)
     dict_low: dict = {
         'begin': [x[0] for x in list_low_group],
         'end': [x[1] for x in list_low_group],
     }
+
     df_low: pd.DataFrame = pd.DataFrame(dict_low, dtype=int)
+    df_low['length'] = df_low['end'] - df_low['begin']
 
     # 内存回收
     del list_low_index, list_low_group, dict_low
 
+    # 其它column
+    df_low['extreme_ba'] = 0        # 波段神器的极值
+    df_low['extreme_high'] = 0      # 最高价的极值
+
+    df_low['open_delta_ba'] = 0     # 按照波段神器最低值买入，开仓偏移多少个周期。
+    df_low['close_delta_ba'] = 0    # 按照波段神器最低值买入，平仓偏移多少个周期。
+    df_low['price_open_ba'] = 0     # 按照波段神器最低值买入，开仓价理论值。
+    df_low['price_close_ba'] = 0    # 按照波段神器最低值买入，平仓价理论值。
+    df_low['open_type_ba'] = 0      # 按照波段神器最低值买入，开仓类型。1=反包，2=连续阳线。
+
+    df_low['open_delta_high'] = 0   # 按照区间最高价的最低值买入，开仓偏移多少个周期。
+    df_low['close_delta_high'] = 0  # 按照区间最高价的最低值买入，平仓偏移多少个周期。
+    df_low['price_open_high'] = 0   # 按照区间最高价的最低值买入，开仓价理论值。
+    df_low['price_close_high'] = 0  # 按照区间最高价的最低值买入，平仓价理论值。
+    df_low['open_type_high'] = 0    # 按照区间最高价的最低值买入，开仓类型。1=反包，2=连续阳线。
+
+    df_low['delta_ba_and_high'] = 0     # 区间最高价的最低值比波段神器极值点延后多少个周期。
+
     # 找出极值
-    df_low['extreme_ba'] = 0
-    df_low['extreme_high'] = 0
     for idx in range(len(df_low)):
         if df_low.iloc[idx]['begin'] == df_low.iloc[idx]['end']:
             df_low.loc[idx, 'extreme_ba'] = df_low.loc[idx, 'begin']
@@ -189,107 +209,87 @@ def test_band_artifact_low(df: pd.DataFrame):
             df_low.loc[idx, 'extreme_ba'] = df.index.get_loc(df[df['ba'] == extreme_ba].index[0])
 
             extreme_high = df.iloc[df_low.iloc[idx]['begin']:df_low.iloc[idx]['end']]['high'].min()
-            df_low.loc[idx, 'extreme_high'] = df.index.get_loc(df[df['high'] == extreme_high].index[0])
+            possible_index_list = df[df['high'] == extreme_high].index
+            if len(possible_index_list) == 1:
+                df_low.loc[idx, 'extreme_high'] = df.index.get_loc(possible_index_list[0])
+            else:
+                date_begin = df.index[df_low.iloc[idx]['begin']].date()
+                date_end = df.index[df_low.iloc[idx]['end']].date()
+                for dt_stamp in possible_index_list:
+                    if date_begin <= dt_stamp.date() <= date_end:
+                        df_low.loc[idx, 'extreme_high'] = df.index.get_loc(dt_stamp)
+
+    df_low['delta_ba_and_high'] = df_low['extreme_high'] - df_low['extreme_ba']
 
     # 计算开仓条件
-    df_low['open_delta_ba'] = 0         # 按照波段神器最低值买入，开仓偏移多少个周期。
-    df_low['close_delta_ba'] = 0        # 按照波段神器最低值买入，平仓偏移多少个周期。
-    df_low['price_open_ba'] = 0         # 按照波段神器最低值买入，开仓价理论值。
-    df_low['price_close_ba'] = 0        # 按照波段神器最低值买入，平仓价理论值。
-    df_low['open_type_ba'] = 0          # 按照波段神器最低值买入，开仓类型。1=反包，2=连续阳线。
-
-    df_low['open_delta_high'] = 0       # 按照区间最高价的最低值买入，开仓偏移多少个周期。
-    df_low['close_delta_high'] = 0      # 按照区间最高价的最低值买入，平仓偏移多少个周期。
-    df_low['price_open_high'] = 0       # 按照区间最高价的最低值买入，开仓价理论值。
-    df_low['price_close_high'] = 0      # 按照区间最高价的最低值买入，平仓价理论值。
-    df_low['open_type_high'] = 0        # 按照区间最高价的最低值买入，开仓类型。1=反包，2=连续阳线。
-    for idx_df_low in range(len(df_low)):
+    for idx in range(len(df_low)):
         # 底部，期待反弹
         # 买入点：反包或连续阳线
 
         # 按照波段神器最低值买入
-        idx_df = df_low.loc[idx_df_low, 'extreme_ba']
+        idx_df = df_low.loc[idx, 'extreme_ba']
 
-        # 底部后第1天反包
-        if df.iloc[idx_df + 1]['high'] > df.iloc[idx_df]['high']:
-            df_low.loc[idx_df_low, 'open_delta_ba'] = 1
-            df_low.loc[idx_df_low, 'open_type_ba'] = 1
-        # 底部后第2天反包
-        elif df.iloc[idx_df + 2]['high'] > df.iloc[idx_df]['high']:
-            df_low.loc[idx_df_low, 'open_delta_ba'] = 2
-            df_low.loc[idx_df_low, 'open_type_ba'] = 1
-        # 底部后第3天反包
-        elif df.iloc[idx_df + 3]['high'] > df.iloc[idx_df]['high']:
-            df_low.loc[idx_df_low, 'open_delta_ba'] = 3
-            df_low.loc[idx_df_low, 'open_type_ba'] = 1
-        # 底部后第4天反包
-        elif df.iloc[idx_df + 4]['high'] > df.iloc[idx_df]['high']:
-            df_low.loc[idx_df_low, 'open_delta_ba'] = 4
-            df_low.loc[idx_df_low, 'open_type_ba'] = 1
-        # 底部后第5天反包
-        elif df.iloc[idx_df + 5]['high'] > df.iloc[idx_df]['high']:
-            df_low.loc[idx_df_low, 'open_delta_ba'] = 5
-            df_low.loc[idx_df_low, 'open_type_ba'] = 1
-        # 连续两天（第1天、第2天）阳线
-        elif df.iloc[idx_df+1]['close'] > df.iloc[idx_df+1]['open'] and \
-                df.iloc[idx_df+2]['close'] > df.iloc[idx_df+2]['open']:
-            df_low.loc[idx_df_low, 'open_delta_ba'] = 3
-            df_low.loc[idx_df_low, 'open_type_ba'] = 2
-        # 连续两天（第2天、第3天）阳线
-        elif df.iloc[idx_df+2]['close'] > df.iloc[idx_df+2]['open'] and \
-                df.iloc[idx_df+3]['close'] > df.iloc[idx_df+3]['open']:
-            df_low.loc[idx_df_low, 'open_delta_ba'] = 4
-            df_low.loc[idx_df_low, 'open_type_ba'] = 2
-        # 连续两天（第3天、第4天）阳线
-        elif df.iloc[idx_df + 3]['close'] > df.iloc[idx_df + 3]['open'] and \
-             df.iloc[idx_df + 4]['close'] > df.iloc[idx_df + 4]['open']:
-            df_low.loc[idx_df_low, 'open_delta_ba'] = 5
-            df_low.loc[idx_df_low, 'open_type_ba'] = 2
-        else:
-            df_low.loc[idx_df_low, 'open_delta_ba'] = -1
-            df_low.loc[idx_df_low, 'open_type_ba'] = -1
+        # 底部后第n天反包
+        for n in range(1, open_window + 1):
+            if df.iloc[idx_df + n]['high'] > df.iloc[idx_df]['high']:
+                df_low.loc[idx, 'open_type_ba'] = n      # 开仓条件为反包
+                df_low.loc[idx, 'open_delta_ba'] = n     # 开仓时间为波段神器极值之后的第1天
+                df_low.loc[idx, 'price_open_ba'] = df.iloc[idx_df]['high']   # 开仓价为波段神器极值的当天的最高价
+                break
+            elif n >= 2 and \
+                 df.iloc[idx_df + n]['close'] > df.iloc[idx_df + n]['open'] and \
+                 df.iloc[idx_df + n - 1]['close'] > df.iloc[idx_df + n - 1]['open']:
+                df_low.loc[idx, 'open_type_ba'] = 2
+                df_low.loc[idx, 'open_delta_ba'] = n + 1
+                df_low.loc[idx, 'price_open_ba'] = df.iloc[idx_df + n + 1]['open']
+                break
+        if df_low.loc[idx, 'open_delta_ba'] == 0:
+            df_low.loc[idx, 'open_delta_ba'] = -1
+            df_low.loc[idx, 'open_type_ba'] = -1
+            df_low.loc[idx, 'price_open_ba'] = -1
 
         # 按照区间最高价的最低值买入
-        idx_df = df_low.loc[idx_df_low, 'extreme_high']
+        idx_df = df_low.loc[idx, 'extreme_high']
 
         # 底部后第1天反包
         if df.iloc[idx_df + 1]['high'] > df.iloc[idx_df]['high']:
-            df_low.loc[idx_df_low, 'open_delta_high'] = 1
-            df_low.loc[idx_df_low, 'open_type_high'] = 1
+            df_low.loc[idx, 'open_delta_high'] = 1
+            df_low.loc[idx, 'open_type_high'] = 1
         # 底部后第2天反包
         elif df.iloc[idx_df + 2]['high'] > df.iloc[idx_df]['high']:
-            df_low.loc[idx_df_low, 'open_delta_high'] = 2
-            df_low.loc[idx_df_low, 'open_type_high'] = 1
+            df_low.loc[idx, 'open_delta_high'] = 2
+            df_low.loc[idx, 'open_type_high'] = 1
         # 底部后第3天反包
         elif df.iloc[idx_df + 3]['high'] > df.iloc[idx_df]['high']:
-            df_low.loc[idx_df_low, 'open_delta_high'] = 3
-            df_low.loc[idx_df_low, 'open_type_high'] = 1
+            df_low.loc[idx, 'open_delta_high'] = 3
+            df_low.loc[idx, 'open_type_high'] = 1
         # 底部后第4天反包
         elif df.iloc[idx_df + 4]['high'] > df.iloc[idx_df]['high']:
-            df_low.loc[idx_df_low, 'open_delta_high'] = 4
-            df_low.loc[idx_df_low, 'open_type_high'] = 1
+            df_low.loc[idx, 'open_delta_high'] = 4
+            df_low.loc[idx, 'open_type_high'] = 1
         # 底部后第5天反包
         elif df.iloc[idx_df + 5]['high'] > df.iloc[idx_df]['high']:
-            df_low.loc[idx_df_low, 'open_delta_high'] = 5
-            df_low.loc[idx_df_low, 'open_type_high'] = 1
+            df_low.loc[idx, 'open_delta_high'] = 5
+            df_low.loc[idx, 'open_type_high'] = 1
         # 连续两天（第1天、第2天）阳线
         elif df.iloc[idx_df + 1]['close'] > df.iloc[idx_df + 1]['open'] and \
                 df.iloc[idx_df + 2]['close'] > df.iloc[idx_df + 2]['open']:
-            df_low.loc[idx_df_low, 'open_delta_high'] = 3
-            df_low.loc[idx_df_low, 'open_type_high'] = 2
+            df_low.loc[idx, 'open_delta_high'] = 3
+            df_low.loc[idx, 'open_type_high'] = 2
         # 连续两天（第2天、第3天）阳线
         elif df.iloc[idx_df + 2]['close'] > df.iloc[idx_df + 2]['open'] and \
                 df.iloc[idx_df + 3]['close'] > df.iloc[idx_df + 3]['open']:
-            df_low.loc[idx_df_low, 'open_delta_high'] = 4
-            df_low.loc[idx_df_low, 'open_type_high'] = 2
+            df_low.loc[idx, 'open_delta_high'] = 4
+            df_low.loc[idx, 'open_type_high'] = 2
         # 连续两天（第3天、第4天）阳线
         elif df.iloc[idx_df + 3]['close'] > df.iloc[idx_df + 3]['open'] and \
                 df.iloc[idx_df + 4]['close'] > df.iloc[idx_df + 4]['open']:
-            df_low.loc[idx_df_low, 'open_delta_high'] = 5
-            df_low.loc[idx_df_low, 'open_type_high'] = 2
+            df_low.loc[idx, 'open_delta_high'] = 5
+            df_low.loc[idx, 'open_type_high'] = 2
         else:
-            df_low.loc[idx_df_low, 'open_delta_high'] = -1
-            df_low.loc[idx_df_low, 'open_type_high'] = -1
+            df_low.loc[idx, 'open_delta_high'] = -1
+            df_low.loc[idx, 'open_type_high'] = -1
+
     # wave_low_filtered_index: List[int] = []
     # for item in list_low_group:
     #     if item[0] == item[1]:
@@ -347,14 +347,16 @@ def test_band_artifact_low(df: pd.DataFrame):
     )
     for idx in range(len(df_low)):
         print(f"{idx+1:3d}: "
-              f"在日期 {df.index[df_low.loc[idx, 'begin']].strftime('%Y-%m-%d')}"
+              f"在 {df.index[df_low.loc[idx, 'begin']].strftime('%Y-%m-%d')}"
               f" 至 {df.index[df_low.loc[idx, 'end']].strftime('%Y-%m-%d')} 的区间中，"
+              f"共{df_low.loc[idx, 'length']}个周期；"
               f"【波段神器】最低值 = {df.iloc[df_low.loc[idx, 'extreme_ba']]['ba']:.3f}，"
               f"出现在 {df.index[df_low.loc[idx, 'extreme_ba']].strftime('%Y-%m-%d')}，"
               f"【最高价】的最低值 = {df.iloc[df_low.loc[idx, 'extreme_high']]['high']:.3f}，"
-              f"出现在 {df.index[df_low.loc[idx, 'extreme_high']].strftime('%Y-%m-%d')}。", end='')
-        print(f"按照波段神器买入，时间在最低值之后{df_low.loc[idx, 'open_delta_ba']:3d}天。", end='')
-        print(f"按照最高价买入，时间在最低值之后{df_low.loc[idx, 'open_delta_high']:3d}天。")
+              f"出现在 {df.index[df_low.loc[idx, 'extreme_high']].strftime('%Y-%m-%d')}；"
+              f"最高价比波段神器延后 {df_low.loc[idx, 'delta_ba_and_high']:3d}个周期。"
+              f"按照波段神器买入，时间在最低值之后{df_low.loc[idx, 'open_delta_ba']:3d}个周期；"
+              f"按照最高价买入，时间在最低值之后{df_low.loc[idx, 'open_delta_high']:3d}个周期。")
 
     print('=' * 20)
 
@@ -365,14 +367,14 @@ def test_band_artifact_low(df: pd.DataFrame):
 
     print('=' * 20)
 
-    print('【波段神器】最低值 和 【区间最高价】最低值 都没有开仓机会的情况：')
-    x = df_low[(df_low['open_delta_ba'] < 0) & (df_low['open_delta_high'] < 0)]
-    x.index = range(len(x))
-    for idx in range(len(x)):
+    print('【波段神器】最低值 和 【区间最高价】最低值 都没有开仓机会的情况：', end='')
+    dt_stamp = df_low[(df_low['open_delta_ba'] < 0) & (df_low['open_delta_high'] < 0)]
+    dt_stamp.index = range(len(dt_stamp))
+    for idx in range(len(dt_stamp)):
         print(
             f"{idx+1:3d}:"
-            f"在日期 {df.index[x.loc[idx, 'begin']].strftime('%Y-%m-%d')}"
-            f" 至 {df.index[x.loc[idx, 'end']].strftime('%Y-%m-%d')} 的区间中"
+            f"在日期 {df.index[dt_stamp.loc[idx, 'begin']].strftime('%Y-%m-%d')}"
+            f" 至 {df.index[dt_stamp.loc[idx, 'end']].strftime('%Y-%m-%d')} 的区间中"
         )
     print('=' * 20)
 
