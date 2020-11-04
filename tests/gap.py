@@ -9,6 +9,55 @@ import os
 import csv
 from datetime import date, timedelta
 
+from openpyxl import Workbook
+
+from QuantWorkshop.utility import packages_path_str
+
+
+def get_holiday_list() -> Tuple[List[Tuple[date, date, str]], List[date]]:
+    result_range: List[Tuple[date, date, str]] = []
+    result_expand: List[date] = []
+    csv_path: str = os.path.join(packages_path_str, 'initial_data', 'holiday.csv')
+    with open(csv_path, newline='', encoding='utf-8') as csv_file:
+        reader = csv.DictReader(csv_file)
+        for row in reader:
+            holiday_begin = date.fromisoformat(row['begin'])
+            holiday_end = date.fromisoformat(row['end'])
+            holiday_reason = row['reason']
+            result_range.append((holiday_begin, holiday_end, holiday_reason))
+            if holiday_begin == holiday_end:
+                result_expand.append(holiday_begin)
+            else:
+                day = holiday_begin
+                while day <= holiday_end:
+                    result_expand.append(day)
+                    day = day + timedelta(days=1)
+    return result_range, result_expand
+
+
+HOLIDAY_RANGE_LIST, HOLIDAY_EXPAND_LIST = get_holiday_list()
+
+print(HOLIDAY_RANGE_LIST)
+print(HOLIDAY_EXPAND_LIST)
+
+
+def is_trading_day(day: date) -> bool:
+    if day.isoweekday() == 6 or day.isoweekday() == 7:
+        return False
+    if day in HOLIDAY_EXPAND_LIST:
+        return False
+    else:
+        return True
+
+
+def is_holiday(day: date) -> bool:
+    if day.isoweekday() == 6 or day.isoweekday() == 7:
+        return True
+    if day in HOLIDAY_EXPAND_LIST:
+        return True
+    else:
+        return False
+
 
 class Weekday(Enum):
     Monday = 1
@@ -32,7 +81,7 @@ def futures() -> dict:
             'multiplier': 300,
             'fluctuation': 0.2,
             'last_trading_day_type': 'weekday',
-            'last_trading_day_value': ['Friday', 3],
+            'last_trading_day_value': [5, 3],
             'listed_contracts': [
                 {
                     'period': 'month',
@@ -51,7 +100,7 @@ def futures() -> dict:
                     'postpone': 2,
                 },
             ],
-            'listed_date': '2010-04-16',
+            'first_listed_date': '2010-04-16',
             'first_listed_contracts': [
                 '1005',
                 '1006',
@@ -104,14 +153,41 @@ def get_contract_symbol(day: date) -> str:
     return day.strftime('%y%m')
 
 
-def contract(day: date):
+def is_contract_expired(product: str, contract: str) -> bool:
     pass
+
+
+def get_if_contracts():
+    product = futures()['IF']
+    day: date = date.fromisoformat(product['first_listed_date'])
+
+    contract_list = [{'symbol': f'IF{x}', 'listed_date': day} for x in product['first_listed_contracts']]
+    for contract in contract_list:
+        contract['expiration_date'] = get_weekday(int(f"20{contract['symbol'][2:4]}"),
+                                                  int(contract['symbol'][4:]),
+                                                  product['last_trading_day_value'][0],
+                                                  product['last_trading_day_value'][1]
+                                                  )
+    for contract in contract_list:
+        print(contract)
+
+    while day <= date.today():
+        if is_trading_day(day):
+            pass
+        day = day + timedelta(days=1)
 
 
 if __name__ == '__main__':
     futures_product_list = [
-        'IF'
+        # 中金所
+        'IF',
+        'IH',
+        'IC',
+        'TF',
+        'T',
+        'TS',
     ]
+
     futures_list = [
         {
             'IF':
@@ -133,3 +209,4 @@ if __name__ == '__main__':
     n: int = 3
     print(get_weekday(year, month, weekday, n), get_weekday(year, month, weekday, n).isoweekday())
     print(get_weekday(2020, 12, 5, 2), Weekday(get_weekday(2020, 11, 5, 2).isoweekday()))
+    get_if_contracts()
