@@ -1,0 +1,30 @@
+{
+    "IF": {
+        "data_downloaded",
+    },
+    "picture_path": "picture",
+    "database": {
+        "driver": "sqlite",
+        "host": "",
+        "port": "",
+        "database": "QuantWorkshop.sqlite",
+        "user": "",
+        "password": ""
+    },
+    "strategy_record": {
+        "backtest": "backtest",
+        "replay": "replay",
+        "real": "real"
+    },
+    "tq": {
+        "account": "brucefrankwong",
+        "password": "V9DrEBkkZkafFqV"
+    },
+    "transaction": [
+        {
+            "broker": "",
+            "account": "",
+            "password": ""
+        }
+    ]
+}
